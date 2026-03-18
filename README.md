@@ -2,6 +2,12 @@
 
 An LSTM-based machine learning model that predicts Tesla (TSLA) stock prices 7 days into the future, delivered via a Telegram bot deployed on AWS EC2.
 
+## 🤖 Try it on Telegram
+
+**[@tsla_forecast_bot](https://t.me/tsla_forecast_bot)**
+
+Send `/forecast` to get a live 7-day TSLA price prediction instantly.
+
 ## Features
 
 - **LSTM Neural Network** — Bidirectional LSTM trained on 15 years of TSLA data
