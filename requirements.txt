@@ -1,0 +1,12 @@
+yfinance
+pandas
+numpy
+scikit-learn
+python-telegram-bot
+newsapi-python
+vadersentiment
+python-dotenv
+matplotlib
+requests
+tensorflow-macos==2.16.2
+tensorflow-metal
