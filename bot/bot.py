@@ -117,13 +117,25 @@ def get_earnings_features(index, trading_days):
 
 
 # ── 4. Fetch + engineer live data ─────────────────────────────────────────────
+def download_dxy(period="180d"):
+    """Download DXY with fallback tickers."""
+    dxy = yf.download("DX=F", period=period, auto_adjust=True, progress=False)
+    if dxy.empty:
+        logger.warning("DX=F failed, trying DX-Y.NYB...")
+        dxy = yf.download("DX-Y.NYB", period=period, auto_adjust=True, progress=False)
+    if dxy.empty:
+        logger.warning("Both DXY tickers failed, using UUP as proxy...")
+        dxy = yf.download("UUP", period=period, auto_adjust=True, progress=False)
+    return dxy
+
+
 def get_recent_data(meta):
     seq_len  = meta["sequence_len"]
     features = meta["features"]
 
     tsla   = yf.download("TSLA",  period="180d", auto_adjust=True, progress=False)
     nasdaq = yf.download("^IXIC", period="180d", auto_adjust=True, progress=False)
-    dxy    = yf.download("DX=F",  period="180d", auto_adjust=True, progress=False)
+    dxy    = download_dxy(period="180d")
     tnx    = yf.download("^TNX",  period="180d", auto_adjust=True, progress=False)
     oil    = yf.download("CL=F",  period="180d", auto_adjust=True, progress=False)
 
@@ -136,6 +148,11 @@ def get_recent_data(meta):
     df["TNX"]    = tnx["Close"]
     df["OIL"]    = oil["Close"]
     df.dropna(inplace=True)
+
+    if len(df) == 0:
+        raise ValueError(
+            "Dataframe is empty after merge — one or more tickers failed to download"
+        )
 
     df["MA_7"]       = df["Close"].rolling(7).mean()
     df["MA_21"]      = df["Close"].rolling(21).mean()
@@ -154,6 +171,11 @@ def get_recent_data(meta):
     df["OIL"]    = df["OIL"].pct_change()
     df.dropna(inplace=True)
 
+    if len(df) == 0:
+        raise ValueError(
+            "Dataframe is empty after feature engineering — check ticker downloads"
+        )
+
     trading_days           = df.index.tolist()
     days_to, is_week       = get_earnings_features(df.index, trading_days)
     df["days_to_earnings"] = days_to
@@ -170,6 +192,11 @@ def get_recent_data(meta):
     last_date  = df.index[-1]
     last_close = float(df["Close"].values.flatten()[-1])
     window     = df[features].tail(seq_len)
+
+    if len(window) < seq_len:
+        raise ValueError(
+            f"Not enough data: got {len(window)} rows, need {seq_len}"
+        )
 
     return window, last_date, last_close, sentiment, n_articles
 
@@ -323,7 +350,9 @@ async def forecast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Forecast error: {e}", exc_info=True)
-        await update.message.reply_text(f"❌ Error: {e}")
+        await update.message.reply_text(
+            f"❌ Error: {e}\n\nPlease try again in a few minutes.",
+        )
 
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):

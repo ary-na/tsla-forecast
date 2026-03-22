@@ -6,3 +6,4 @@ __pycache__/
 .DS_Store
 data/tsla_lstm_data/
 models/
+*.pem
